@@ -6,7 +6,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Weather Forecasting App", page_icon="🌦")
 
-# API key: environment variable first, then Streamlit secrets
+
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not API_KEY:
     try:
