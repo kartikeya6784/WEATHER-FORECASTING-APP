@@ -3,10 +3,10 @@ import requests
 import pandas as pd
 import joblib
 import streamlit as st
-from dotenv import load_dotenv
-from pathlib import Path
 
+st.set_page_config(page_title="Weather Forecasting App", page_icon="🌦")
 
+# API key: environment variable first, then Streamlit secrets
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not API_KEY:
     try:
@@ -19,8 +19,8 @@ if not API_KEY:
 def load_models():
     return joblib.load("rain_model.pkl"), joblib.load("temp_model.pkl")
 
-rain_model, temp_model = load_models()
 
+rain_model, temp_model = load_models()
 
 RAIN_FEATURES = ["MinTemp", "MaxTemp", "Humidity9am",
                  "Humidity3pm", "Pressure9am", "Pressure3pm"]
@@ -49,7 +49,7 @@ st.title("🌦 Weather Forecasting App")
 st.write("Fetches live weather and predicts tomorrow's rain and temperature.")
 
 if not API_KEY:
-    st.error("API key not found. Check your .env file.")
+    st.error("API key not found. Add OPENWEATHER_API_KEY in the app's Secrets.")
     st.stop()
 
 city = st.text_input("City", "Meerut")
@@ -58,9 +58,10 @@ if st.button("Predict Tomorrow"):
     try:
         w = get_weather(city)
     except requests.HTTPError as e:
-        if e.response.status_code == 404:
+        code = e.response.status_code
+        if code == 404:
             st.error("City not found. Check the spelling.")
-        elif e.response.status_code == 401:
+        elif code == 401:
             st.error("Invalid API key.")
         else:
             st.error(f"API error: {e}")
@@ -69,7 +70,6 @@ if st.button("Predict Tomorrow"):
         st.error(f"Could not fetch weather: {e}")
         st.stop()
 
-    
     row = {
         "MinTemp": w["temp_min"],
         "MaxTemp": w["temp_max"],
@@ -79,15 +79,16 @@ if st.button("Predict Tomorrow"):
         "Pressure3pm": w["pressure"],
         "Temp9am": w["temp"],
     }
+    data = pd.DataFrame([row])
 
-    rain_pred = rain_model.predict(pd.DataFrame([row])[RAIN_FEATURES])[0]
-    temp_pred = temp_model.predict(pd.DataFrame([row])[TEMP_FEATURES])[0]
+    rain_pred = rain_model.predict(data[RAIN_FEATURES])[0]
+    temp_pred = temp_model.predict(data[TEMP_FEATURES])[0]
 
     st.subheader(f"Current weather in {city}")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Temperature", f"{w['temp']:.1f} °C")
-    col2.metric("Humidity", f"{w['humidity']}%")
-    col3.metric("Pressure", f"{w['pressure']} hPa")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Temperature", f"{w['temp']:.1f} °C")
+    c2.metric("Humidity", f"{w['humidity']}%")
+    c3.metric("Pressure", f"{w['pressure']} hPa")
 
     st.subheader("Prediction")
     if rain_pred == 1:
